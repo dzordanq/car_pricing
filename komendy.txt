@@ -1,0 +1,2 @@
+nodemon --exec "C:\Users\Kamil\Anaconda3\envs\otomoto_server\python.exe server.py"
+C:\Users\Kamil\Anaconda3\envs\otomoto_server\python.exe draft.py

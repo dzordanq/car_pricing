@@ -13,18 +13,17 @@ app = Flask(__name__)
 CORS(app)
 
 
-class JSONEncoder(json.JSONEncoder):
-    ''' extend json-encoder class'''
+# class JSONEncoder(json.JSONEncoder):
+#     ''' extend json-encoder class'''
+#     def default(self, o):
+#         if isinstance(o, ObjectId):
+#             return str(o)
+#         if isinstance(o, datetime.datetime):
+#             return str(o)
+#         return json.JSONEncoder.default(self, o)
 
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        if isinstance(o, datetime.datetime):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
 
-
-app.json_encoder = JSONEncoder
+#app.json_encoder = JSONEncoder
 
 
 @app.route('/', methods=['GET'])
@@ -34,8 +33,7 @@ def get_ui():
 
 @app.before_first_request
 def startup():
-    global regressor
-    # regressor = get_ml_model(model_name='grande_punto_model.pkl')
+    None
 
 
 @app.route('/marki', methods=['GET'])
@@ -44,6 +42,7 @@ def make():
     response = {
         'Marki': data
     }
+    
     return jsonify(response), 200
 
 @app.route('/model', methods=['GET'])

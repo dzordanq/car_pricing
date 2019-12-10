@@ -1,5 +1,6 @@
 from model import get_ml_model_columns, get_ml_scaler
 from pymongo import MongoClient
+import urllib.parse
 
 
 def find_replace(arg1):
@@ -29,15 +30,16 @@ def find_replace(arg1):
         return arg1
 
 
-def process_request_data(request_data):
-    data = request_data
+def process_request_data(data):
+    print(data)
     model_name = get_model_name(data)
+    print(model_name)
     columns = get_ml_model_columns(model_name=model_name)
-
     moc = int(data['Moc'])
     przebieg = int(data['Przebieg'])
-    rok_produkcji = int(data['Rok produkcji'])
+    rok_produkcji = int(data['Rok_produkcji'])
     pojemnosc = int(data['Pojemnosc'])
+    
 
     # Columns for specified car model
     # print('Columns przed', columns)
@@ -67,9 +69,23 @@ def fill_data_to_model():
 
 
 def get_model_name(data):
-    model_name = data['Marka pojazdu'] + '_' + \
-        ''.join(e for e in data['Model pojazdu'] if e.isalnum()) + '.pkl'
+    model_name = data['Marka_pojazdu'] + '_' + \
+        ''.join(e for e in data['Model_pojazdu'] if e.isalnum()) + '.pkl'
+
     return model_name
+
+
+def load_vehicle_makes():
+    client = MongoClient('localhost', 27017)
+    db = client['formularz']
+    collection = db['marki']
+
+    makes = collection.find_one()
+    mapped_makes = makes['Marki']
+
+    client.close()
+
+    return mapped_makes
 
 
 def load_vehicle_models(data):
@@ -81,8 +97,8 @@ def load_vehicle_models(data):
     )
     client.close()
 
-    mapped_make = find_replace(collection['Marka pojazdu'])
-    mapped_models = find_replace(collection['Model pojazdu'])
+    mapped_make = collection['Marka pojazdu']
+    mapped_models = collection['Model pojazdu']
 
     return {'Marka_pojazdu': mapped_make,
             'Model_pojazdu': mapped_models}
@@ -99,25 +115,12 @@ def load_vehicle_version_data(data):
 
     client.close()
 
-    mapped_make = find_replace(collection['Marka pojazdu'])
-    mapped_models = find_replace(collection['Model pojazdu'])
-    mapped_version = find_replace(collection['Wersja'])
+    mapped_make = collection['Marka pojazdu']
+    mapped_models = collection['Model pojazdu']
+    mapped_version = collection['Wersja']
     return {'Marka_pojazdu': mapped_make,
             'Model_pojazdu': mapped_models,
             'Wersja': mapped_version}
-
-
-def load_vehicle_makes():
-    client = MongoClient('localhost', 27017)
-    db = client['formularz']
-    collection = db['marki']
-
-    makes = collection.find_one()
-    mapped_makes = find_replace(makes['Marki'])
-
-    client.close()
-
-    return mapped_makes
 
 
 def load_vehicle_data(data):
@@ -129,28 +132,21 @@ def load_vehicle_data(data):
         collection = collection.find_one(
             {'Marka pojazdu': data['Marka_pojazdu'],
              'Model pojazdu': data['Model_pojazdu']})
-
-        for index, el in enumerate(collection):
-            if(index == 0):
-                continue
-            else:
-                response[find_replace(el)] = find_replace(collection[el])
+        return collection
     else:
-        print(':', data['Marka_pojazdu'] ,":")
-        print(':', data['Model_pojazdu'] ,":")
-        print(':', data['Wersja'], ":")
         collection = collection.find_one(
             {'Marka pojazdu': data['Marka_pojazdu'],
              'Model pojazdu': data['Model_pojazdu'],
-             'Wersja': data['Wersja'].replace('_',' ')}) # tymczasowe rozwiazanie
-        try:
-            for index, el in enumerate(collection):
-                if(index == 0):
-                    continue
-                else:
-                    response[find_replace(el)] = find_replace(collection[el])
-        except TypeError:
-            print('Database returned None -> Function load_vehicle_data')
+             'Wersja': data['Wersja']})
+        return collection
+        # try:
+        #     for index, el in enumerate(collection):
+        #         if(index == 0):
+        #             continue
+        #         else:
+        #             response[find_replace(el)] = collection[el]
+        # except TypeError:
+        #     print('Database returned None -> Function load_vehicle_data')
 
     client.close()
     return response

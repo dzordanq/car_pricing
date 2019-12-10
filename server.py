@@ -9,6 +9,7 @@ from bson.json_util import dumps
 import datetime
 from bson.objectid import ObjectId
 
+
 app = Flask(__name__)
 CORS(app)
 
@@ -68,6 +69,7 @@ def version():
 @app.route('/dane_pojazdu', methods=['GET'])
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
+    print(data)
     response = {
         'Dane_pojazdu' : data
     }

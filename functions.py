@@ -117,6 +117,9 @@ def load_vehicle_version_data(data):
     mapped_make = collection['Marka pojazdu']
     mapped_models = collection['Model pojazdu']
     mapped_version = collection['Wersja']
+
+    if(type(mapped_version[0]) is float): # tymczasowo
+        mapped_version = ['-']
     return {'Marka_pojazdu': mapped_make,
             'Model_pojazdu': mapped_models,
             'Wersja': mapped_version}
@@ -131,22 +134,25 @@ def load_vehicle_data(data):
         collection = collection.find_one(
             {'Marka pojazdu': data['Marka_pojazdu'],
              'Model pojazdu': data['Model_pojazdu']})
-        return collection
+        for index, el in enumerate(collection):
+                if(index == 0):
+                    continue
+                else:
+                    response[find_replace(el)] = collection[el]
     else:
         collection = collection.find_one(
             {'Marka pojazdu': data['Marka_pojazdu'],
              'Model pojazdu': data['Model_pojazdu'],
              'Wersja': data['Wersja']})
-        return collection
-        # try:
-        #     for index, el in enumerate(collection):
-        #         if(index == 0):
-        #             continue
-        #         else:
-        #             response[find_replace(el)] = collection[el]
-        # except TypeError:
-        #     print('Database returned None -> Function load_vehicle_data')
-
+        for index, el in enumerate(collection):
+            try:
+                for index, el in enumerate(collection):
+                    if(index == 0):
+                        continue
+                    else:
+                        response[find_replace(el)] = collection[el]
+            except TypeError:
+                print('Database returned None -> Function load_vehicle_data')
     client.close()
     return response
 

@@ -1,17 +1,18 @@
 from model import get_ml_model_columns, get_ml_scaler
 from pymongo import MongoClient
 
+
 def find_replace(arg1):
     dictionary = {' ': '_',
-                'Š': 'S',
-                'ł': 'l',
-                'ë': 'e',
-                'Ż': 'Z',
-                'ż': 'z',
-                'ś': 's',
-                'ć': 'c',
-                'ę': 'e',
-                'ó': 'o'}
+                  'Š': 'S',
+                  'ł': 'l',
+                  'ë': 'e',
+                  'Ż': 'Z',
+                  'ż': 'z',
+                  'ś': 's',
+                  'ć': 'c',
+                  'ę': 'e',
+                  'ó': 'o'}
 
     if(type(arg1) is list):
         return [find_replace(el) for el in arg1]
@@ -20,16 +21,12 @@ def find_replace(arg1):
         for item in arg1:
             # iterate by keys
             if item in dictionary.keys():
-            # look up and replace
+                # look up and replace
                 arg1 = arg1.replace(item, dictionary[item])
                 # return updated string
         return arg1
     else:
         return arg1
-
-
-        
-
 
 
 def process_request_data(request_data):
@@ -74,34 +71,30 @@ def get_model_name(data):
         ''.join(e for e in data['Model pojazdu'] if e.isalnum()) + '.pkl'
     return model_name
 
+
 def load_vehicle_models(data):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['modele']
-
     collection = collection.find_one(
-        {'Marka pojazdu': data['Marka pojazdu']}
-        )
+        {'Marka pojazdu': data['Marka_pojazdu']}
+    )
     client.close()
 
     mapped_make = find_replace(collection['Marka pojazdu'])
     mapped_models = find_replace(collection['Model pojazdu'])
-    #print('-' * 150)
-    if(type(collection['Model pojazdu']) is list):
-        print('to jest lista')
-        [find_replace(el) for el in collection['Model pojazdu']]
-    
 
-    return {'Marka pojazdu': mapped_make ,
-            'Model pojazdu' : mapped_models}
+    return {'Marka_pojazdu': mapped_make,
+            'Model_pojazdu': mapped_models}
+
 
 def load_vehicle_version_data(data):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['wersje']
     collection = collection.find_one(
-        {'Marka pojazdu': data['Marka pojazdu'],
-        'Model pojazdu': data['Model pojazdu']},
+        {'Marka pojazdu': data['Marka_pojazdu'],
+         'Model pojazdu': data['Model_pojazdu']},
     )
 
     client.close()
@@ -109,9 +102,9 @@ def load_vehicle_version_data(data):
     mapped_make = find_replace(collection['Marka pojazdu'])
     mapped_models = find_replace(collection['Model pojazdu'])
     mapped_version = find_replace(collection['Wersja'])
-    return {'Marka pojazdu': mapped_make ,
-            'Model pojazdu' : mapped_models,
-            'Wersja' : mapped_version}
+    return {'Marka_pojazdu': mapped_make,
+            'Model_pojazdu': mapped_models,
+            'Wersja': mapped_version}
 
 
 def load_vehicle_makes():
@@ -126,6 +119,7 @@ def load_vehicle_makes():
 
     return mapped_makes
 
+
 def load_vehicle_data(data):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
@@ -133,29 +127,31 @@ def load_vehicle_data(data):
     response = {}
     if data['Wersja'] == '-':
         collection = collection.find_one(
-                {'Marka pojazdu': data['Marka pojazdu'],
-                'Model pojazdu': data['Model pojazdu']})
+            {'Marka pojazdu': data['Marka_pojazdu'],
+             'Model pojazdu': data['Model_pojazdu']})
 
-        
         for index, el in enumerate(collection):
             if(index == 0):
                 continue
             else:
-                response[find_replace(el)] = find_replace(collection[el]) 
+                response[find_replace(el)] = find_replace(collection[el])
     else:
+        print(':', data['Marka_pojazdu'] ,":")
+        print(':', data['Model_pojazdu'] ,":")
+        print(':', data['Wersja'], ":")
         collection = collection.find_one(
-                {'Marka pojazdu': data['Marka pojazdu'],
-                'Model pojazdu': data['Model pojazdu'],
-                'Wersja': data['Wersja']})
+            {'Marka pojazdu': data['Marka_pojazdu'],
+             'Model pojazdu': data['Model_pojazdu'],
+             'Wersja': data['Wersja'].replace('_',' ')}) # tymczasowe rozwiazanie
         try:
             for index, el in enumerate(collection):
                 if(index == 0):
                     continue
                 else:
-                    response[find_replace(el)] = find_replace(collection[el]) 
+                    response[find_replace(el)] = find_replace(collection[el])
         except TypeError:
             print('Database returned None -> Function load_vehicle_data')
-            
+
     client.close()
     return response
 

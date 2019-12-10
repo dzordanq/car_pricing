@@ -49,8 +49,8 @@ def make():
 def model():
     data = functions.load_vehicle_models(request.args)
     response = {
-        'Marka': data['Marka pojazdu'],
-        'Modele': data['Model pojazdu']
+        'Marka': data['Marka_pojazdu'],
+        'Modele': data['Model_pojazdu']
     }
     return jsonify(response), 200
 
@@ -58,8 +58,8 @@ def model():
 def version():
     data = functions.load_vehicle_version_data(request.args)
     response = {
-        'Marka': data['Marka pojazdu'],
-        'Modele': data['Model pojazdu'],
+        'Marka': data['Marka_pojazdu'],
+        'Modele': data['Model_pojazdu'],
         'Wersje': data['Wersja']
 
     }
@@ -69,7 +69,7 @@ def version():
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
     response = {
-        'Dane pojazdu' : data
+        'Dane_pojazdu' : data
     }
     return jsonify(response), 200
 

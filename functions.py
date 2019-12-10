@@ -39,7 +39,6 @@ def process_request_data(data):
     przebieg = int(data['Przebieg'])
     rok_produkcji = int(data['Rok_produkcji'])
     pojemnosc = int(data['Pojemnosc'])
-    
 
     # Columns for specified car model
     # print('Columns przed', columns)

@@ -69,7 +69,7 @@ def version():
 @app.route('/dane_pojazdu', methods=['GET'])
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
-    print(data)
+
     response = {
         'Dane_pojazdu' : data
     }

@@ -31,7 +31,6 @@ def find_replace(arg1):
 
 
 def process_request_data(data):
-    print(data)
     model_name = get_model_name(data)
     print(model_name)
     columns = get_ml_model_columns(model_name=model_name)
@@ -45,7 +44,7 @@ def process_request_data(data):
     # columns[4] = '1'  # jak nie ma Wersji pojazdu to wypełnia '1'
     # print('Columns po ->', columns)
     data_to_model = [0] * (len(columns) - 4)
-
+    data_to_model[1] = 1
     # Loop to fill list with 1 on certain place
     for i in data:
         if data[i] in columns:
@@ -78,13 +77,13 @@ def load_vehicle_makes():
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['marki']
-
     makes = collection.find_one()
-    mapped_makes = makes['Marki']
-
     client.close()
-
-    return mapped_makes
+    
+    makes = makes['Marki']
+    makes.sort()
+    
+    return makes
 
 
 def load_vehicle_models(data):
@@ -96,11 +95,12 @@ def load_vehicle_models(data):
     )
     client.close()
 
-    mapped_make = collection['Marka pojazdu']
-    mapped_models = collection['Model pojazdu']
+    make = collection['Marka pojazdu']
+    models = collection['Model pojazdu']
+    models.sort()
 
-    return {'Marka_pojazdu': mapped_make,
-            'Model_pojazdu': mapped_models}
+    return {'Marka_pojazdu': make,
+            'Model_pojazdu': models}
 
 
 def load_vehicle_version_data(data):
@@ -114,15 +114,16 @@ def load_vehicle_version_data(data):
 
     client.close()
 
-    mapped_make = collection['Marka pojazdu']
-    mapped_models = collection['Model pojazdu']
-    mapped_version = collection['Wersja']
-
-    if(type(mapped_version[0]) is float): # tymczasowo
-        mapped_version = ['-']
-    return {'Marka_pojazdu': mapped_make,
-            'Model_pojazdu': mapped_models,
-            'Wersja': mapped_version}
+    make = collection['Marka pojazdu']
+    model = collection['Model pojazdu']
+    version = collection['Wersja']
+    version.sort()
+    
+    if(type(version[0]) is float):  # tymczasowo
+        version = ['-']
+    return {'Marka_pojazdu': make,
+            'Model_pojazdu': model,
+            'Wersja': version}
 
 
 def load_vehicle_data(data):
@@ -135,10 +136,10 @@ def load_vehicle_data(data):
             {'Marka pojazdu': data['Marka_pojazdu'],
              'Model pojazdu': data['Model_pojazdu']})
         for index, el in enumerate(collection):
-                if(index == 0):
-                    continue
-                else:
-                    response[find_replace(el)] = collection[el]
+            if(index == 0):
+                continue
+            else:
+                response[find_replace(el)] = collection[el]
     else:
         collection = collection.find_one(
             {'Marka pojazdu': data['Marka_pojazdu'],

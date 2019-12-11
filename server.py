@@ -80,7 +80,7 @@ def vehicle_data():
 def get_price():
     X_test = functions.process_request_data(request.args)
     regressor = get_ml_model(functions.get_model_name(request.args))
-
+    print(regressor)
     X_test = np.asarray(X_test).reshape(1, -1)
     #print('X_test ->', len(X_test[0]))
     #print('Regressor coef ->', len(regressor.coef_[0]))

@@ -36,8 +36,9 @@ def process_request_data(data):
     columns = get_ml_model_columns(model_name=model_name)
     moc = int(data['Moc'])
     przebieg = int(data['Przebieg'])
-    rok_produkcji = int(data['Rok_produkcji'])
     pojemnosc = int(data['Pojemnosc'])
+    rok_produkcji = int(data['Rok_produkcji'])
+    
 
     # Columns for specified car model
     # print('Columns przed', columns)

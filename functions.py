@@ -33,7 +33,7 @@ def find_replace(arg1):
 
 def process_request_data(data):
     model_name = get_model_name(data)
-    print(model_name)
+    # print(model_name)
     columns = get_ml_model_columns(model_name=model_name)
     moc = int(data['Moc'])
     przebieg = int(data['Przebieg'])

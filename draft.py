@@ -1,3 +1,5 @@
+from trans import trans
+
 def find_replace(arg1):
     dictionary = {" ": '_',
                 'Š': 'S',
@@ -27,11 +29,12 @@ def translation(data):
         return trans(data)
 
 
-from trans import trans
-print(trans)
-lista1 = ['ŠKODA', 'Citroën', 'Żuk', 'Wałga']
-print(find_replace(lista1))
-print(translation(lista1))
+# print(trans)
+# lista1 = ['ŠKODA', 'Citroën', 'Żuk', 'Wałga']
+# print(find_replace(lista1))
+# print(translation(lista1))
+
+
 
 
 

@@ -1,6 +1,7 @@
 from model import get_ml_model_columns, get_ml_scaler
 from pymongo import MongoClient
 import urllib.parse
+import datetime
 
 
 def find_replace(arg1):
@@ -45,7 +46,11 @@ def process_request_data(data):
     # columns[4] = '1'  # jak nie ma Wersji pojazdu to wypełnia '1'
     # print('Columns po ->', columns)
     data_to_model = [0] * (len(columns) - 4)
-    data_to_model[1] = 1
+    data_to_model[1] = 1 # Ustawia oferta od -> osoby prywatnej
+    if((datetime.date.today().year - rok_produkcji) <= 1 and przebieg < 10000):
+        data_to_model[columns.index('Nowe')] = 1
+    else:
+        data_to_model[columns.index('Używane')] = 1
     # Loop to fill list with 1 on certain place
     for i in data:
         if data[i] in columns:

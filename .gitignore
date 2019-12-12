@@ -5,6 +5,11 @@ __pycache__/
 
 # C extensions
 *.so
+# Files
+db.py
+draft.py
+Funkcja do tworzenia modeli i zapisu do pliku.py
+otomoto-wybrane-dane-imputed-processed.csv
 
 # Distribution / packaging
 .Python

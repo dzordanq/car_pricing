@@ -69,8 +69,12 @@ def version():
 @app.route('/dane_pojazdu', methods=['GET'])
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
-
-    response = {
+    if data['Liczba_pozycji'] < 10:
+        response = {
+            "Komunikat": "Nie mozna wycenic pojazdu z powodu zbyt małej liczby danych"
+            }
+    else:
+        response = {
         'Dane_pojazdu' : data
     }
     return jsonify(response), 200

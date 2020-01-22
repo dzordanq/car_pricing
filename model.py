@@ -8,11 +8,6 @@ import pickle
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 def get_ml_model(model_name):
-    """
-    Models:
-        mazdy_model.pkl
-        grande_punto_model.pkl
-    """
     regressor = pickle.load(open(os.path.join(script_path,'Regresja pliki','Modele regresji', model_name), 'rb'))
     return regressor
 

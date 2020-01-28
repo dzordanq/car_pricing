@@ -1,7 +1,8 @@
-from model import get_ml_model_columns, get_ml_scaler
+from model import get_ml_model_columns, get_ml_scaler, get_linear_model, get_polynomial_features, get_polynomial_model
 from pymongo import MongoClient
 import urllib.parse
 import datetime
+import numpy as np
 
 
 def find_replace(arg1):
@@ -31,33 +32,20 @@ def find_replace(arg1):
         return arg1
 
 
-def process_request_data(data):
-    model_name = get_model_name(data)
-    # print(model_name)
+def convert_request_data_to_ml_model_data(requestArgs):
+    model_name = get_model_name(requestArgs)
     columns = get_ml_model_columns(model_name=model_name)
-    moc = int(data['Moc'])
-    przebieg = int(data['Przebieg'])
-    pojemnosc = int(data['Pojemnosc'])
-    rok_produkcji = int(data['Rok_produkcji'])
-    
 
-    # Columns for specified car model
-    # print('Columns przed', columns)
-    # columns[4] = '1'  # jak nie ma Wersji pojazdu to wypełnia '1'
-    # print('Columns po ->', columns)
     data_to_model = [0] * (len(columns) - 4)
     # Loop to fill list with 1 on certain place
-    for i in data:
-        if data[i] in columns:
-            index = columns.index(data[i])
+    for i in requestArgs:
+        if requestArgs[i] in columns:
+            index = columns.index(requestArgs[i])
             data_to_model[index] = 1
 
     # Scaler
-    scaler = get_ml_scaler(model_name)
-    scaled_data = scaler.transform(
-        [[moc, przebieg, pojemnosc, rok_produkcji]]).tolist()
-
-    data_to_model += scaled_data[0]
+    scaled_data = scale_data(model_name, requestArgs)
+    data_to_model += scaled_data
 
     return data_to_model
 
@@ -67,9 +55,10 @@ def fill_data_to_model():
     return None
 
 
-def get_model_name(data):
-    model_name = data['Marka_pojazdu'] + '_' + \
-        ''.join(e for e in data['Model_pojazdu'] if e.isalnum()) + '.pkl'
+def get_model_name(requestArgs):
+    model_name = requestArgs['Marka_pojazdu'] + '_' + \
+        ''.join(
+            e for e in requestArgs['Model_pojazdu'] if e.isalnum()) + '.pkl'
 
     return model_name
 
@@ -80,19 +69,19 @@ def load_vehicle_makes():
     collection = db['marki']
     makes = collection.find_one()
     client.close()
-    
+
     makes = makes['Marki']
     makes.sort()
-    
+
     return makes
 
 
-def load_vehicle_models(data):
+def load_vehicle_models(requestArgs):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['modele']
     collection = collection.find_one(
-        {'Marka pojazdu': data['Marka_pojazdu']}
+        {'Marka pojazdu': requestArgs['Marka_pojazdu']}
     )
     client.close()
 
@@ -104,13 +93,13 @@ def load_vehicle_models(data):
             'Model_pojazdu': models}
 
 
-def load_vehicle_version_data(data):
+def load_vehicle_version_data(requestArgs):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['wersje']
     collection = collection.find_one(
-        {'Marka pojazdu': data['Marka_pojazdu'],
-         'Model pojazdu': data['Model_pojazdu']},
+        {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+         'Model pojazdu': requestArgs['Model_pojazdu']},
     )
 
     client.close()
@@ -119,7 +108,7 @@ def load_vehicle_version_data(data):
     model = collection['Model pojazdu']
     version = collection['Wersja']
     version.sort()
-    
+
     if(type(version[0]) is float):  # tymczasowo
         version = ['-']
     return {'Marka_pojazdu': make,
@@ -127,15 +116,15 @@ def load_vehicle_version_data(data):
             'Wersja': version}
 
 
-def load_vehicle_data(data):
+def load_vehicle_data(requestArgs):
     client = MongoClient('localhost', 27017)
     db = client['formularz']
     collection = db['auta']
     response = {}
-    if data['Wersja'] == '-':
+    if requestArgs['Wersja'] == '-':
         collection = collection.find_one(
-            {'Marka pojazdu': data['Marka_pojazdu'],
-             'Model pojazdu': data['Model_pojazdu']})
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu']})
         for index, el in enumerate(collection):
             if(index == 0):
                 continue
@@ -143,9 +132,9 @@ def load_vehicle_data(data):
                 response[find_replace(el)] = collection[el]
     else:
         collection = collection.find_one(
-            {'Marka pojazdu': data['Marka_pojazdu'],
-             'Model pojazdu': data['Model_pojazdu'],
-             'Wersja': data['Wersja']})
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu'],
+             'Wersja': requestArgs['Wersja']})
         for index, el in enumerate(collection):
             try:
                 for index, el in enumerate(collection):
@@ -158,6 +147,59 @@ def load_vehicle_data(data):
     client.close()
     return response
 
+
+def make_dataset_to_create_chart(requestArgs):
+    year_list = sorted(get_model_year_list(requestArgs))
+    model_name = get_model_name(requestArgs)
+    data_to_chart = []
+    requestArgs = dict(requestArgs)
+    for year in year_list:
+        requestArgs['Rok_produkcji'] = year
+        X_test = convert_request_data_to_ml_model_data(requestArgs)
+
+        linear_regressor = get_linear_model(model_name)
+        X_linear_test = np.asarray(X_test).reshape(1, -1)
+
+        polynomial_regressor = get_polynomial_model(model_name)
+        polynomial_features = get_polynomial_features(model_name)
+        X_poly_test = polynomial_features.transform(
+            np.asarray(X_test).reshape(1, -1))
+
+        linear_prediction = linear_regressor.predict(X_linear_test)
+        polynomial_prediction = polynomial_regressor.predict(X_poly_test)
+        data_to_chart.append([year, int(linear_prediction.item())])
+        data_to_chart.append([year, int(polynomial_prediction.item())])
+    return data_to_chart
+
+
+def get_model_year_list(requestArgs):
+    client = MongoClient('localhost', 27017)
+    db = client['formularz']
+    collection = db['auta']
+    if requestArgs['Wersja'] == '-':
+        collection = collection.find_one(
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu']})
+    else:
+        collection = collection.find_one(
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu'],
+             'Wersja': requestArgs['Wersja']})
+
+    return collection['Rok produkcji']
+
+
+def scale_data(model_name, requestArgs):
+    moc = int(requestArgs['Moc'])
+    przebieg = int(requestArgs['Przebieg'])
+    pojemnosc = int(requestArgs['Pojemnosc'])
+    rok_produkcji = int(requestArgs['Rok_produkcji'])
+
+    scaler = get_ml_scaler(model_name)
+    scaled_data = scaler.transform(
+        [[moc, przebieg, pojemnosc, rok_produkcji]]).tolist()
+
+    return scaled_data[0]
 # [0, rok_produkcji, przebieg, pojemnosc, moc, 0, 0, 0, # Male ,Miejskie, Coupe
 #                          0, 1, 0, 1, 0, 0, # Kombi, Kompakt, Sedan, Benzyna, Benzyna+Gaz, Diesel
 #                          0, 0, 0, 1, 0, # Wersja 1,2,2,3,4

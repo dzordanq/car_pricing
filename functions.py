@@ -153,6 +153,7 @@ def make_dataset_to_create_chart(requestArgs):
     model_name = get_model_name(requestArgs)
     data_to_chart = []
     requestArgs = dict(requestArgs)
+    
     for year in year_list:
         requestArgs['Rok_produkcji'] = year
         X_test = convert_request_data_to_ml_model_data(requestArgs)
@@ -167,6 +168,7 @@ def make_dataset_to_create_chart(requestArgs):
 
         linear_prediction = linear_regressor.predict(X_linear_test)
         polynomial_prediction = polynomial_regressor.predict(X_poly_test)
+        
         data_to_chart.append([year, int(linear_prediction.item())])
         data_to_chart.append([year, int(polynomial_prediction.item())])
     return data_to_chart

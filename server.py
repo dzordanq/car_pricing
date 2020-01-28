@@ -96,12 +96,12 @@ def get_price():
     linear_prediction = linear_regressor.predict(X_linear_test)
     polynomial_prediction = polynomial_regressor.predict(X_poly_test)
     
-    chart_list = functions.make_dataset_to_create_chart(request.args)
+    data_to_create_chart = functions.make_dataset_to_create_chart(request.args)
     
     response = {
         'Cena regresja liniowa': int(linear_prediction.item()),
         'Cena regresja wielomianowa' : int(polynomial_prediction.item()),
-        'Lista' : chart_list
+        'Lista' : data_to_create_chart
     }
     print(response)
     return jsonify(response), 200

@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import urllib.parse
 import datetime
 import numpy as np
+from urllib.parse import urlencode
 
 
 def find_replace(arg1):
@@ -15,7 +16,9 @@ def find_replace(arg1):
                   'ś': 's',
                   'ć': 'c',
                   'ę': 'e',
-                  'ó': 'o'}
+                  'ó': 'o',
+                  '(': '',
+                  ')': ''}
 
     if(type(arg1) is list):
         return [find_replace(el) for el in arg1]
@@ -202,6 +205,49 @@ def scale_data(model_name, requestArgs):
         [[moc, przebieg, pojemnosc, rok_produkcji]]).tolist()
 
     return scaled_data[0]
+
+
+def generate_otomoto_link(requestArgs):
+    url = "https://www.otomoto.pl/osobowe/"
+    make = find_replace(requestArgs['Marka_pojazdu'].lower()).replace('_', '-')
+    model = find_replace(requestArgs['Model_pojazdu'].lower()).replace('_', '-')
+    start_date = 'od-' + requestArgs['Rok_produkcji']
+    
+    fuel_dict = {'Benzyna' : 'petrol',
+                 'Diesel' : 'diesel',
+                 'Benzyna+LPG' : 'petrol-lpg',
+                 'Elektryczny' : 'electric',
+                 'Hybrydowy': 'hybrid'}
+    
+    transmission_dict = {'Na przednie koła': 'front-wheel',
+                         'Na tylne koła': 'rear-wheel',
+                         'Napęd 4x4': 'all-wheel-lock'}
+    
+    if requestArgs['Wersja'] == '-':
+        url = url + urljoin(make, model, start_date ,'?')
+    else:
+        version = find_replace(requestArgs['Wersja']).lower().replace('_', '-')
+        url = url + urljoin(make, model, version, start_date ,'?')
+    
+    getVars = {'search[filter_float_year:to]' : requestArgs['Rok_produkcji'],
+                'search[filter_float_mileage:from]': int(int(requestArgs['Przebieg']) * 0.75),
+                'search[filter_float_mileage:to]': int(int(requestArgs['Przebieg']) * 1.25),
+                'search[filter_float_engine_capacity:from]': int(int(requestArgs['Pojemnosc']) * 0.8),
+                'search[filter_float_engine_capacity:to]': int(int(requestArgs['Pojemnosc']) * 1.2),
+                'search[filter_enum_fuel_type][0]': fuel_dict[requestArgs['Rodzaj_paliwa']],
+                'search[filter_float_engine_power:from]': int(int(requestArgs['Moc']) * 0.8),
+                'search[filter_float_engine_power:to]': int(int(requestArgs['Moc']) * 1.2),
+                'search[filter_enum_transmission][0]': transmission_dict[requestArgs['Naped']],
+                'search[order]': 'created_at:desc'
+                #'search[brand_program_id][0]': '',
+                #'search[country]' : ''
+                }
+    
+    return url + urlencode(getVars)
+
+def urljoin(*args):
+    return "/".join(map(lambda x: str(x).rstrip('/'), args))    
+    
 # [0, rok_produkcji, przebieg, pojemnosc, moc, 0, 0, 0, # Male ,Miejskie, Coupe
 #                          0, 1, 0, 1, 0, 0, # Kombi, Kompakt, Sedan, Benzyna, Benzyna+Gaz, Diesel
 #                          0, 0, 0, 1, 0, # Wersja 1,2,2,3,4

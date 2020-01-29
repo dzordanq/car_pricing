@@ -97,13 +97,17 @@ def get_price():
     polynomial_prediction = polynomial_regressor.predict(X_poly_test)
     
     data_to_create_chart = functions.make_dataset_to_create_chart(request.args)
+    otomoto_url = functions.generate_otomoto_link(request.args)
+    print(otomoto_url)
+    # response = {
+    #     'Cena regresja liniowa': int(linear_prediction.item()),
+    #     'Cena regresja wielomianowa' : int(polynomial_prediction.item()),
+    #     'Lista' : data_to_create_chart
+    # }
     
     response = {
-        'Cena regresja liniowa': int(linear_prediction.item()),
-        'Cena regresja wielomianowa' : int(polynomial_prediction.item()),
-        'Lista' : data_to_create_chart
+        'Cena' : int(polynomial_prediction.item())
     }
-    print(response)
     return jsonify(response), 200
 
 

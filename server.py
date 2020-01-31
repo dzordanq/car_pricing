@@ -99,18 +99,19 @@ def get_price():
     data_to_create_chart = functions.make_dataset_to_create_chart(request.args)
     otomoto_url = functions.generate_otomoto_link(request.args)
     print(otomoto_url)
-    # response = {
-    #     'Cena regresja liniowa': int(linear_prediction.item()),
-    #     'Cena regresja wielomianowa' : int(polynomial_prediction.item()),
-    #     'Lista' : data_to_create_chart
-    # }
-    
     response = {
-        'Cena' : int(polynomial_prediction.item())
+        'Cena regresja liniowa': int(linear_prediction.item()),
+        'Cena regresja wielomianowa' : int(polynomial_prediction.item()),
+        'Lista' : data_to_create_chart
     }
+    
+    # response = {
+    #     'Cena' : int(polynomial_prediction.item())
+    # }
     return jsonify(response), 200
 
 
 if __name__ == '__main__':
     app.run(host='localhost', port=5000)
 # wlaczyc maximiliana jak robi we flasku
+

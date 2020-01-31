@@ -226,14 +226,14 @@ def generate_otomoto_link(requestArgs):
     if requestArgs['Wersja'] == '-':
         url = url + urljoin(make, model, start_date ,'?')
     else:
-        version = find_replace(requestArgs['Wersja']).lower().replace('_', '-')
+        version = find_replace(requestArgs['Wersja']).lower().replace('_', '-').rstrip('-')
         url = url + urljoin(make, model, version, start_date ,'?')
     
     getVars = {'search[filter_float_year:to]' : requestArgs['Rok_produkcji'],
                 'search[filter_float_mileage:from]': int(int(requestArgs['Przebieg']) * 0.75),
                 'search[filter_float_mileage:to]': int(int(requestArgs['Przebieg']) * 1.25),
-                'search[filter_float_engine_capacity:from]': int(int(requestArgs['Pojemnosc']) * 0.8),
-                'search[filter_float_engine_capacity:to]': int(int(requestArgs['Pojemnosc']) * 1.2),
+                'search[filter_float_engine_capacity:from]': int(int(requestArgs['Pojemnosc']) * 0.95),
+                'search[filter_float_engine_capacity:to]': int(int(requestArgs['Pojemnosc']) * 1.05),
                 'search[filter_enum_fuel_type][0]': fuel_dict[requestArgs['Rodzaj_paliwa']],
                 'search[filter_float_engine_power:from]': int(int(requestArgs['Moc']) * 0.8),
                 'search[filter_float_engine_power:to]': int(int(requestArgs['Moc']) * 1.2),

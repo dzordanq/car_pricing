@@ -11,6 +11,7 @@ db.py
 draft.py
 Funkcja do tworzenia modeli i zapisu do pliku.py
 otomoto-wybrane-dane-imputed-processed.csv
+Regresja pliki
 
 # Distribution / packaging
 .Python

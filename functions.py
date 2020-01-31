@@ -130,14 +130,11 @@ def load_vehicle_data(requestArgs):
              'Model pojazdu': requestArgs['Model_pojazdu'],
              'Wersja': requestArgs['Wersja']})
         for index, el in enumerate(collection):
-            try:
-                for index, el in enumerate(collection):
-                    if(index == 0):
-                        continue
-                    else:
-                        response[find_replace(el)] = collection[el]
-            except TypeError:
-                print('Database returned None -> Function load_vehicle_data')
+            for index, el in enumerate(collection):
+                if(index == 0):
+                    continue
+                else:
+                    response[find_replace(el)] = collection[el]
     client.close()
     return response
 

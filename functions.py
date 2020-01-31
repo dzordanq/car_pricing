@@ -22,14 +22,10 @@ def find_replace(arg1):
 
     if(type(arg1) is list):
         return [find_replace(el) for el in arg1]
-    # is the item in the dict?
     elif(type(arg1) is str):
         for item in arg1:
-            # iterate by keys
             if item in dictionary.keys():
-                # look up and replace
                 arg1 = arg1.replace(item, dictionary[item])
-                # return updated string
         return arg1
     else:
         return arg1

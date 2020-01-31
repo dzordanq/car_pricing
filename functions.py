@@ -53,11 +53,6 @@ def convert_request_data_to_ml_model_data(requestArgs):
     return data_to_model
 
 
-def fill_data_to_model():
-
-    return None
-
-
 def get_model_name(requestArgs):
     model_name = requestArgs['Marka_pojazdu'] + '_' + \
         ''.join(
@@ -151,12 +146,12 @@ def load_vehicle_data(requestArgs):
     return response
 
 
-def make_dataset_to_create_chart(requestArgs):
+def get_data_to_chart(requestArgs):
     year_list = sorted(get_model_year_list(requestArgs))
     model_name = get_model_name(requestArgs)
     data_to_chart = []
     requestArgs = dict(requestArgs)
-    
+
     for year in year_list:
         requestArgs['Rok_produkcji'] = year
         X_test = convert_request_data_to_ml_model_data(requestArgs)
@@ -171,7 +166,7 @@ def make_dataset_to_create_chart(requestArgs):
 
         linear_prediction = linear_regressor.predict(X_linear_test)
         polynomial_prediction = polynomial_regressor.predict(X_poly_test)
-        
+
         data_to_chart.append([year, int(linear_prediction.item())])
         data_to_chart.append([year, int(polynomial_prediction.item())])
     return data_to_chart
@@ -210,57 +205,43 @@ def scale_data(model_name, requestArgs):
 def generate_otomoto_link(requestArgs):
     url = "https://www.otomoto.pl/osobowe/"
     make = find_replace(requestArgs['Marka_pojazdu'].lower()).replace('_', '-')
-    model = find_replace(requestArgs['Model_pojazdu'].lower()).replace('_', '-')
+    model = find_replace(
+        requestArgs['Model_pojazdu'].lower()).replace('_', '-')
     start_date = 'od-' + requestArgs['Rok_produkcji']
-    
-    fuel_dict = {'Benzyna' : 'petrol',
-                 'Diesel' : 'diesel',
-                 'Benzyna+LPG' : 'petrol-lpg',
-                 'Elektryczny' : 'electric',
+
+    fuel_dict = {'Benzyna': 'petrol',
+                 'Diesel': 'diesel',
+                 'Benzyna+LPG': 'petrol-lpg',
+                 'Elektryczny': 'electric',
                  'Hybrydowy': 'hybrid'}
-    
+
     transmission_dict = {'Na przednie koła': 'front-wheel',
                          'Na tylne koła': 'rear-wheel',
                          'Napęd 4x4': 'all-wheel-lock'}
-    
+
     if requestArgs['Wersja'] == '-':
-        url = url + urljoin(make, model, start_date ,'?')
+        url = url + urljoin(make, model, start_date, '?')
     else:
-        version = find_replace(requestArgs['Wersja']).lower().replace('_', '-').rstrip('-')
-        url = url + urljoin(make, model, version, start_date ,'?')
-    
-    getVars = {'search[filter_float_year:to]' : requestArgs['Rok_produkcji'],
-                'search[filter_float_mileage:from]': int(int(requestArgs['Przebieg']) * 0.75),
-                'search[filter_float_mileage:to]': int(int(requestArgs['Przebieg']) * 1.25),
-                'search[filter_float_engine_capacity:from]': int(int(requestArgs['Pojemnosc']) * 0.95),
-                'search[filter_float_engine_capacity:to]': int(int(requestArgs['Pojemnosc']) * 1.05),
-                'search[filter_enum_fuel_type][0]': fuel_dict[requestArgs['Rodzaj_paliwa']],
-                'search[filter_float_engine_power:from]': int(int(requestArgs['Moc']) * 0.8),
-                'search[filter_float_engine_power:to]': int(int(requestArgs['Moc']) * 1.2),
-                'search[filter_enum_transmission][0]': transmission_dict[requestArgs['Naped']],
-                'search[order]': 'created_at:desc'
-                #'search[brand_program_id][0]': '',
-                #'search[country]' : ''
-                }
-    
+        version = find_replace(requestArgs['Wersja']).lower().replace(
+            '_', '-').rstrip('-')
+        url = url + urljoin(make, model, version, start_date, '?')
+
+    getVars = {'search[filter_float_year:to]': requestArgs['Rok_produkcji'],
+               'search[filter_float_mileage:from]': int(int(requestArgs['Przebieg']) * 0.75),
+               'search[filter_float_mileage:to]': int(int(requestArgs['Przebieg']) * 1.25),
+               'search[filter_float_engine_capacity:from]': int(int(requestArgs['Pojemnosc']) * 0.95),
+               'search[filter_float_engine_capacity:to]': int(int(requestArgs['Pojemnosc']) * 1.05),
+               'search[filter_enum_fuel_type][0]': fuel_dict[requestArgs['Rodzaj_paliwa']],
+               'search[filter_float_engine_power:from]': int(int(requestArgs['Moc']) * 0.8),
+               'search[filter_float_engine_power:to]': int(int(requestArgs['Moc']) * 1.2),
+               'search[filter_enum_transmission][0]': transmission_dict[requestArgs['Naped']],
+               'search[order]': 'created_at:desc'
+               # 'search[brand_program_id][0]': '',
+               # 'search[country]' : ''
+               }
+
     return url + urlencode(getVars)
 
+
 def urljoin(*args):
-    return "/".join(map(lambda x: str(x).rstrip('/'), args))    
-    
-# [0, rok_produkcji, przebieg, pojemnosc, moc, 0, 0, 0, # Male ,Miejskie, Coupe
-#                          0, 1, 0, 1, 0, 0, # Kombi, Kompakt, Sedan, Benzyna, Benzyna+Gaz, Diesel
-#                          0, 0, 0, 1, 0, # Wersja 1,2,2,3,4
-#                          0, 0, 0, 1]
-
-
-# "data":{"Marka pojazdu":"Mazda",
-#         "Moc":"150",
-#         "Oferta od":"Osoby prywatnej",
-#         "Pojemnosc":"1800",
-#         "Przebieg":"77000",
-#         "Rok produkcji":"2015",
-#         "Silnik":"Silnik_Benzyna",
-#         "Skrzynia biegow":"Skrzynia_Automatyczna bezstopniowa (CVT)",
-#         "Typ auta":"Typ_Coupe",
-#         "Wersja":"Wersja_III (2013-)"}
+    return "/".join(map(lambda x: str(x).rstrip('/'), args))

@@ -4,7 +4,7 @@ import urllib.parse
 import datetime
 import numpy as np
 from urllib.parse import urlencode
-
+import pandas as pd
 
 def find_replace(arg1):
     dictionary = {' ': '_',
@@ -139,6 +139,44 @@ def load_vehicle_data(requestArgs):
     return response
 
 
+# Generate data to year / price chart
+def make_chart_dataset(requestArgs):
+  client = MongoClient('localhost', 27017)
+  db = client['otomoto']
+  collection = db['Car']
+  year_price_list = []
+  if requestArgs['Wersja'] is not '-':
+    year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                  'Wersja': requestArgs['Wersja']},
+                                                 {'Rok produkcji': True,
+                                                  '_id': False})))['Rok produkcji']))
+    for year in year_list:
+      price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                  'Wersja': requestArgs['Wersja'],
+                                                  'Rok produkcji' : year},
+                                                 {'Cena' : True,
+                                                  '_id': False})))
+      mean_price = int(np.mean(price_list))
+      year_price_list.append([year, mean_price])
+  else:
+    year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                  'Model pojazdu': requestArgs['Model_pojazdu']},
+                                                 {'Rok produkcji': True,
+                                                  '_id': False})))['Rok produkcji']))
+  
+    for year in year_list:
+      price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                  'Rok produkcji' : year},
+                                                 {'Cena' : True,
+                                                  '_id': False})))
+      mean_price = int(np.mean(price_list))
+      year_price_list.append([year, mean_price])
+    
+  return year_price_list
+
 def get_data_to_chart(requestArgs):
     year_list = sorted(get_model_year_list(requestArgs))
     model_name = get_model_name(requestArgs)
@@ -160,7 +198,7 @@ def get_data_to_chart(requestArgs):
         linear_prediction = linear_regressor.predict(X_linear_test)
         polynomial_prediction = polynomial_regressor.predict(X_poly_test)
 
-        data_to_chart.append([year, int(linear_prediction.item())])
+        #data_to_chart.append([year, int(linear_prediction.item())])
         data_to_chart.append([year, int(polynomial_prediction.item())])
     return data_to_chart
 

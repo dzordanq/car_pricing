@@ -6,6 +6,8 @@ import numpy as np
 from urllib.parse import urlencode
 import pandas as pd
 
+client = MongoClient("localhost", 27017)
+
 def find_replace(arg1):
     dictionary = {' ': '_',
                   'Š': 'S',
@@ -34,7 +36,7 @@ def find_replace(arg1):
 def convert_request_data_to_ml_model_data(requestArgs):
     model_name = get_model_name(requestArgs)
     columns = get_ml_model_columns(model_name=model_name)
-
+    # TODO if electric
     data_to_model = [0] * (len(columns) - 4)
     # Loop to fill list with 1 on certain place
     for i in requestArgs:
@@ -58,11 +60,10 @@ def get_model_name(requestArgs):
 
 
 def load_vehicle_makes():
-    client = MongoClient('localhost', 27017)
+    # 
     db = client['formularz']
     collection = db['marki']
     makes = collection.find_one()
-    client.close()
 
     makes = makes['Marki']
     makes.sort()
@@ -70,14 +71,13 @@ def load_vehicle_makes():
     return makes
 
 
-def load_vehicle_models(requestArgs):
-    client = MongoClient('localhost', 27017)
+def load_vehicle_models(requestArgs):  
     db = client['formularz']
     collection = db['modele']
     collection = collection.find_one(
         {'Marka pojazdu': requestArgs['Marka_pojazdu']}
     )
-    client.close()
+
 
     make = collection['Marka pojazdu']
     models = collection['Model pojazdu']
@@ -88,7 +88,7 @@ def load_vehicle_models(requestArgs):
 
 
 def load_vehicle_version_data(requestArgs):
-    client = MongoClient('localhost', 27017)
+    
     db = client['formularz']
     collection = db['wersje']
     collection = collection.find_one(
@@ -96,7 +96,6 @@ def load_vehicle_version_data(requestArgs):
          'Model pojazdu': requestArgs['Model_pojazdu']},
     )
 
-    client.close()
 
     make = collection['Marka pojazdu']
     model = collection['Model pojazdu']
@@ -111,7 +110,7 @@ def load_vehicle_version_data(requestArgs):
 
 
 def load_vehicle_data(requestArgs):
-    client = MongoClient('localhost', 27017)
+    
     db = client['formularz']
     collection = db['auta']
     response = {}
@@ -123,6 +122,10 @@ def load_vehicle_data(requestArgs):
             if(index == 0):
                 continue
             else:
+                if el == 'Pojemność skokowa':
+                    key = f'{find_replace(el)} ({min(collection[el])}-{max(collection[el])})'
+                    response[key] = collection[el]
+                    continue
                 response[find_replace(el)] = collection[el]
     else:
         collection = collection.find_one(
@@ -130,81 +133,169 @@ def load_vehicle_data(requestArgs):
              'Model pojazdu': requestArgs['Model_pojazdu'],
              'Wersja': requestArgs['Wersja']})
         for index, el in enumerate(collection):
-            for index, el in enumerate(collection):
-                if(index == 0):
+            if(index == 0):
+                continue
+            else:
+                if el == 'Pojemność skokowa':
+                    key = f'{find_replace(el)} ({min(collection[el])}-{max(collection[el])})'
+                    response[key] = collection[el]
                     continue
-                else:
-                    response[find_replace(el)] = collection[el]
-    client.close()
+                response[find_replace(el)] = collection[el]
     return response
+
+def get_min_max_capacity(requestArgs):
+    
+    db = client['formularz']
+    collection = db['auta']
+    
+    if requestArgs['Wersja'] == '-':
+        collection = collection.find_one(
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu']})
+    else:
+        collection = collection.find_one(
+            {'Marka pojazdu': requestArgs['Marka_pojazdu'],
+             'Model pojazdu': requestArgs['Model_pojazdu'],
+             'Wersja': requestArgs['Wersja']})
+    
+
+    return min(collection['Pojemność skokowa']), max(collection['Pojemność skokowa'])
 
 
 # Generate data to year / price chart
-def make_chart_dataset(requestArgs):
-  client = MongoClient('localhost', 27017)
-  db = client['otomoto']
-  collection = db['Car']
-  year_price_list = []
-  if requestArgs['Wersja'] is not '-':
-    year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
-                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
-                                                  'Wersja': requestArgs['Wersja']},
-                                                 {'Rok produkcji': True,
-                                                  '_id': False})))['Rok produkcji']))
-    for year in year_list:
-      price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
-                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
-                                                  'Wersja': requestArgs['Wersja'],
-                                                  'Rok produkcji' : year},
-                                                 {'Cena' : True,
-                                                  '_id': False})))
-      mean_price = int(np.mean(price_list))
-      year_price_list.append([year, mean_price])
-  else:
-    year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
-                                                  'Model pojazdu': requestArgs['Model_pojazdu']},
-                                                 {'Rok produkcji': True,
-                                                  '_id': False})))['Rok produkcji']))
-  
-    for year in year_list:
-      price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
-                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
-                                                  'Rok produkcji' : year},
-                                                 {'Cena' : True,
-                                                  '_id': False})))
-      mean_price = int(np.mean(price_list))
-      year_price_list.append([year, mean_price])
+def create_year_price_data_to_graph(requestArgs):
     
-  return year_price_list
+    db = client['otomoto']
+    collection = db['Car']
+    year_price_list = []
+    if requestArgs['Wersja'] is not '-':
+        year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                                  'Wersja': requestArgs['Wersja']},
+                                                                 {'Rok produkcji': True,
+                                                                  '_id': False})))['Rok produkcji']))
+        for year in year_list:
+            price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                            'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                            'Wersja': requestArgs['Wersja'],
+                                                            'Rok produkcji': year},
+                                                           {'Cena': True,
+                                                            '_id': False})))
+            mean_price = int(np.mean(price_list))
+            year_price_list.append([year, mean_price])
+    else:
+        year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu']},
+                                                                 {'Rok produkcji': True,
+                                                                  '_id': False})))['Rok produkcji']))
 
-def get_data_to_chart(requestArgs):
+        for year in year_list:
+            price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                            'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                            'Rok produkcji': year},
+                                                           {'Cena': True,
+                                                            '_id': False})))
+            mean_price = int(np.mean(price_list))
+            year_price_list.append([year, mean_price])
+
+    return year_price_list
+
+# Generate data to mileage / price chart
+def create_mileage_year_data_to_graph(requestArgs):
+    
+    db = client['otomoto']
+    collection = db['Car']
+    year_mileage_list = []
+    if requestArgs['Wersja'] is not '-':
+        year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                                  'Wersja': requestArgs['Wersja']},
+                                                                 {'Rok produkcji': True,
+                                                                  '_id': False})))['Rok produkcji']))
+
+        for year in year_list:
+            mileage_list = list(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                    'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                                    'Rok produkcji': year},
+                                                           {'Przebieg': True,
+                                                            '_id': False})))['Przebieg'])
+            mileage_list = [int(el.replace(' ', '')
+                            .replace('k','')
+                            .replace('m', '')) for el in mileage_list if type(el) is str]
+            mean_mileage = int(np.mean(mileage_list))
+            year_mileage_list.append([year, mean_mileage])
+    else:
+        year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu']},
+                                                                 {'Rok produkcji': True,
+                                                                  '_id': False})))['Rok produkcji']))
+
+        for year in year_list:
+            mileage_list = list(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                    'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                                    'Rok produkcji': year},
+                                                           {'Przebieg': True,
+                                                            '_id': False})))['Przebieg'])
+            mileage_list = [int(el.replace(' ', '')
+                            .replace('k','')
+                            .replace('m', '')) for el in mileage_list if type(el) is str]
+            mean_mileage = int(np.mean(mileage_list))
+            year_mileage_list.append([year, mean_mileage])
+
+    return year_mileage_list
+
+def calculate_mean_price(requestArgs):
+    
+    db = client['otomoto']
+    collection = db['Car']
+    price_list = []
+    
+    if requestArgs['Wersja'] is not '-':
+        price_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu'],
+                                                                  'Wersja': requestArgs['Wersja']},
+                                                                 {'Cena': True,
+                                                                  '_id': False})))['Cena']))
+    else:
+        price_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
+                                                                  'Model pojazdu': requestArgs['Model_pojazdu']},
+                                                                 {'Cena': True,
+                                                                  '_id': False})))['Cena']))
+    mean_price = int(np.mean(price_list))
+    return mean_price
+
+def create_year_price_regression_data_to_graph(requestArgs):
     year_list = sorted(get_model_year_list(requestArgs))
     model_name = get_model_name(requestArgs)
-    data_to_chart = []
+    data_to_graph = []
     requestArgs = dict(requestArgs)
 
-    for year in year_list:
-        requestArgs['Rok_produkcji'] = year
-        X_test = convert_request_data_to_ml_model_data(requestArgs)
-
-        linear_regressor = get_linear_model(model_name)
-        X_linear_test = np.asarray(X_test).reshape(1, -1)
-
-        polynomial_regressor = get_polynomial_model(model_name)
-        polynomial_features = get_polynomial_features(model_name)
-        X_poly_test = polynomial_features.transform(
-            np.asarray(X_test).reshape(1, -1))
-
-        linear_prediction = linear_regressor.predict(X_linear_test)
-        polynomial_prediction = polynomial_regressor.predict(X_poly_test)
-
-        #data_to_chart.append([year, int(linear_prediction.item())])
-        data_to_chart.append([year, int(polynomial_prediction.item())])
-    return data_to_chart
+    if requestArgs['Estymator'] == 'Regresja liniowa':
+        for year in year_list:
+            requestArgs['Rok_produkcji'] = year
+            X_test = convert_request_data_to_ml_model_data(requestArgs)
+            
+            linear_regressor = get_linear_model(model_name)
+            X_linear_test = np.asarray(X_test).reshape(1, -1)
+            linear_prediction = linear_regressor.predict(X_linear_test)
+            data_to_graph.append([year, int(linear_prediction.item())])
+    else:
+        for year in year_list:
+            requestArgs['Rok_produkcji'] = year
+            X_test = convert_request_data_to_ml_model_data(requestArgs)
+            
+            polynomial_regressor = get_polynomial_model(model_name)
+            polynomial_features = get_polynomial_features(model_name)
+            X_poly_test = polynomial_features.transform(
+                np.asarray(X_test).reshape(1, -1))
+            polynomial_prediction = polynomial_regressor.predict(X_poly_test)
+            data_to_graph.append([str(year), int(polynomial_prediction.item())])
+        
+    return data_to_graph
 
 
 def get_model_year_list(requestArgs):
-    client = MongoClient('localhost', 27017)
+    
     db = client['formularz']
     collection = db['auta']
     if requestArgs['Wersja'] == '-':
@@ -233,12 +324,12 @@ def scale_data(model_name, requestArgs):
     return scaled_data[0]
 
 
-def generate_otomoto_link(requestArgs):
+def generate_otomoto_url(requestArgs):
     url = "https://www.otomoto.pl/osobowe/"
     make = find_replace(requestArgs['Marka_pojazdu'].lower()).replace('_', '-')
     model = find_replace(
         requestArgs['Model_pojazdu'].lower()).replace('_', '-')
-    start_date = 'od-' + requestArgs['Rok_produkcji']
+    start_year = f"od-{requestArgs['Rok_produkcji']}"
 
     fuel_dict = {'Benzyna': 'petrol',
                  'Diesel': 'diesel',
@@ -250,12 +341,7 @@ def generate_otomoto_link(requestArgs):
                          'Na tylne koła': 'rear-wheel',
                          'Napęd 4x4': 'all-wheel-lock'}
 
-    if requestArgs['Wersja'] == '-':
-        url = url + urljoin(make, model, start_date, '?')
-    else:
-        version = find_replace(requestArgs['Wersja']).lower().replace(
-            '_', '-').rstrip('-')
-        url = url + urljoin(make, model, version, start_date, '?')
+    url = url + urljoin(make, model, start_year, '?')
 
     getVars = {'search[filter_float_year:to]': requestArgs['Rok_produkcji'],
                'search[filter_float_mileage:from]': int(int(requestArgs['Przebieg']) * 0.75),
@@ -265,14 +351,40 @@ def generate_otomoto_link(requestArgs):
                'search[filter_enum_fuel_type][0]': fuel_dict[requestArgs['Rodzaj_paliwa']],
                'search[filter_float_engine_power:from]': int(int(requestArgs['Moc']) * 0.8),
                'search[filter_float_engine_power:to]': int(int(requestArgs['Moc']) * 1.2),
-               'search[filter_enum_transmission][0]': transmission_dict[requestArgs['Naped']],
+               #'search[filter_enum_transmission][0]': transmission_dict[requestArgs['Naped']],
                'search[order]': 'created_at:desc'
-               # 'search[brand_program_id][0]': '',
+               #'search[brand_program_id][0]': '',
                # 'search[country]' : ''
                }
+    url = url + urlencode(getVars)
+    return url
 
-    return url + urlencode(getVars)
+def get_capacity_range():
+    None
+    
 
+def linear_prediction(requestArgs):
+    model_name = get_model_name(requestArgs)
+    X_test = convert_request_data_to_ml_model_data(requestArgs)
 
+    linear_regressor = get_linear_model(model_name)
+    X_test = np.asarray(X_test).reshape(1, -1)
+   
+    linear_prediction = linear_regressor.predict(X_test)
+    return int(linear_prediction.item())
+
+def polynomial_prediction(requestArgs):
+    model_name = get_model_name(requestArgs)
+    X_test = convert_request_data_to_ml_model_data(requestArgs)
+    
+    polynomial_regressor = get_polynomial_model(model_name)
+    polynomial_features = get_polynomial_features(model_name)
+    X_test = polynomial_features.transform(np.asarray(X_test).reshape(1, -1))
+    
+    polynomial_prediction = polynomial_regressor.predict(X_test)
+    return int(polynomial_prediction.item())
+    
+    
+    
 def urljoin(*args):
     return "/".join(map(lambda x: str(x).rstrip('/'), args))

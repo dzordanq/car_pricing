@@ -5,6 +5,7 @@ import datetime
 import numpy as np
 from urllib.parse import urlencode
 import pandas as pd
+import re
 
 client = MongoClient("localhost", 27017)
 
@@ -35,9 +36,9 @@ def find_replace(arg1):
 
 def convert_request_data_to_ml_model_data(requestArgs):
     model_name = get_model_name(requestArgs)
-    columns = get_ml_model_columns(model_name=model_name)
+    columns = get_ml_model_columns(requestArgs)
     # TODO if electric
-    data_to_model = [0] * (len(columns) - 4)
+    data_to_model = [0] * len(columns)
     # Loop to fill list with 1 on certain place
     for i in requestArgs:
         if requestArgs[i] in columns:
@@ -46,14 +47,22 @@ def convert_request_data_to_ml_model_data(requestArgs):
 
     # Scaler
     scaled_data = scale_data(model_name, requestArgs)
-    data_to_model += scaled_data
+    data_to_model[0:4] = scaled_data
 
     return data_to_model
 
 
 def get_model_name(requestArgs):
-    model_name = requestArgs['Marka_pojazdu'] + '_' + \
-        ''.join(
+    try:
+        wersja = requestArgs['Wersja']
+    except:
+        wersja = None
+    if wersja:
+        model_name = requestArgs['Marka_pojazdu'] + '_' + ''.join(
+            e for e in requestArgs['Model_pojazdu'] if e.isalnum()) + '_' + ''.join(
+            e for e in requestArgs['Wersja'] if e.isalnum()) + '.pkl'
+    else:
+        model_name = requestArgs['Marka_pojazdu'] + '_' + ''.join(
             e for e in requestArgs['Model_pojazdu'] if e.isalnum()) + '.pkl'
 
     return model_name
@@ -112,7 +121,7 @@ def load_vehicle_version_data(requestArgs):
 def load_vehicle_data(requestArgs):
     
     db = client['formularz']
-    collection = db['auta']
+    collection = db['auta2']
     response = {}
     if requestArgs['Wersja'] == '-':
         collection = collection.find_one(
@@ -123,7 +132,10 @@ def load_vehicle_data(requestArgs):
                 continue
             else:
                 if el == 'Pojemność skokowa':
-                    key = f'{find_replace(el)} ({min(collection[el])}-{max(collection[el])})'
+                    if collection[el] == []:
+                        key = f'{find_replace(el)}'
+                    else:
+                        key = f'{find_replace(el)} ({min(collection[el])}-{max(collection[el])})'
                     response[key] = collection[el]
                     continue
                 response[find_replace(el)] = collection[el]
@@ -146,7 +158,7 @@ def load_vehicle_data(requestArgs):
 def get_min_max_capacity(requestArgs):
     
     db = client['formularz']
-    collection = db['auta']
+    collection = db['auta2']
     
     if requestArgs['Wersja'] == '-':
         collection = collection.find_one(
@@ -158,22 +170,38 @@ def get_min_max_capacity(requestArgs):
              'Model pojazdu': requestArgs['Model_pojazdu'],
              'Wersja': requestArgs['Wersja']})
     
-
-    return min(collection['Pojemność skokowa']), max(collection['Pojemność skokowa'])
+    if collection['Pojemność min'] is None and collection['Pojemność max'] is None:
+        return 0, 0
+    else:
+        return collection['Pojemność min'], collection['Pojemność max']
 
 
 # Generate data to year / price chart
 def create_year_price_data_to_graph(requestArgs):
-    
     db = client['otomoto']
     collection = db['Car']
     year_price_list = []
+    
+    
     if requestArgs['Wersja'] is not '-':
+        try: 
+            match = re.search(r"\(\d{4}.\d{4}\)", requestArgs['Wersja']).group()
+            match = match.split(match[5])
+            year_min = int(match[0][1:])
+            year_max = int(match[1][:-1])
+        except:
+            match = re.search(r"\(\d{4}", requestArgs['Wersja']).group()
+            year_min = int(match[1:])
+            year_max = None
         year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
                                                                   'Model pojazdu': requestArgs['Model_pojazdu'],
                                                                   'Wersja': requestArgs['Wersja']},
                                                                  {'Rok produkcji': True,
                                                                   '_id': False})))['Rok produkcji']))
+        if year_max is not None:
+            year_list = list(filter(lambda x: int(x) >= year_min and int(x) <= year_max , year_list))
+        else: 
+            year_list = list(filter(lambda x: int(x) >= year_min, year_list))
         for year in year_list:
             price_list = pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
                                                             'Model pojazdu': requestArgs['Model_pojazdu'],
@@ -206,13 +234,29 @@ def create_mileage_year_data_to_graph(requestArgs):
     db = client['otomoto']
     collection = db['Car']
     year_mileage_list = []
+    
+
+
     if requestArgs['Wersja'] is not '-':
+        try: 
+            match = re.search(r"\(\d{4}.\d{4}\)", requestArgs['Wersja']).group()
+            match = match.split(match[5])
+            year_min = int(match[0][1:])
+            year_max = int(match[1][:-1])
+        except:
+            match = re.search(r"\(\d{4}", requestArgs['Wersja']).group()
+            year_min = int(match[1:])
+            year_max = None
         year_list = sorted(set(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
                                                                   'Model pojazdu': requestArgs['Model_pojazdu'],
                                                                   'Wersja': requestArgs['Wersja']},
                                                                  {'Rok produkcji': True,
                                                                   '_id': False})))['Rok produkcji']))
 
+        if year_max is not None:
+            year_list = list(filter(lambda x: int(x) >= year_min and int(x) <= year_max , year_list))
+        else: 
+            year_list = list(filter(lambda x: int(x) >= year_min, year_list))
         for year in year_list:
             mileage_list = list(pd.DataFrame(list(collection.find({'Marka pojazdu': requestArgs['Marka_pojazdu'],
                                                                     'Model pojazdu': requestArgs['Model_pojazdu'],
@@ -319,7 +363,7 @@ def scale_data(model_name, requestArgs):
 
     scaler = get_ml_scaler(model_name)
     scaled_data = scaler.transform(
-        [[moc, przebieg, pojemnosc, rok_produkcji]]).tolist()
+        [[moc, pojemnosc, przebieg, rok_produkcji]]).tolist()
 
     return scaled_data[0]
 

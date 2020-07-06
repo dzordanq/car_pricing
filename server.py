@@ -49,7 +49,7 @@ def version():
 @app.route('/vehicle_data', methods=['GET'])
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
-    if data['Liczba_pozycji'] < 10:
+    if data['Liczba_pozycji'] < 50:
         print("Nie mozna wycenic pojazdu z powodu zbyt małej liczby danych")
         response = {
             'Komunikat': 'Wycena pojazdu nie jest możliwa z powodu zbyt małej liczby pojazdów w bazie danych'

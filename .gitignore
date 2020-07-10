@@ -13,6 +13,7 @@ Funkcja do tworzenia modeli i zapisu do pliku.py
 otomoto-wybrane-dane-imputed-processed.csv
 Regresja pliki/
 komendy.txt
+.vscode
 
 # Distribution / packaging
 .Python

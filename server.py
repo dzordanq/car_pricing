@@ -49,10 +49,11 @@ def version():
 @app.route('/vehicle_data', methods=['GET'])
 def vehicle_data():
     data = functions.load_vehicle_data(request.args)
-    if data['Liczba_pozycji'] < 10:
+    if data['Liczba_pozycji'] < 50:
         print("Nie mozna wycenic pojazdu z powodu zbyt małej liczby danych")
         response = {
-            "Komunikat": "Nie mozna wycenic pojazdu z powodu zbyt małej liczby danych"
+            'Komunikat': 'Wycena pojazdu nie jest możliwa z powodu zbyt małej liczby pojazdów w bazie danych'
+            #'Liczba pozycji w bazie danych': data['Liczba_pozycji']
         }
     else:
         response = {
@@ -61,35 +62,43 @@ def vehicle_data():
     return jsonify(response), 200
 
 
+@app.route('/vehicle', methods=['GET'])
+def vehicle():
+    year_price_data = functions.create_year_price_data_to_graph(request.args)
+    year_mileage_data = functions.create_mileage_year_data_to_graph(request.args)
+    mean_price = functions.calculate_mean_price(request.args)
+    capacity_min, capacity_max = functions.get_min_max_capacity(request.args)
+    response = {
+        'Srednia cena': mean_price,
+        'Rok produkcji - cena': year_price_data,
+        'Rok produkcji - przebieg': year_mileage_data,
+        'Pojemnosc' : {
+            'min': capacity_min,
+            'max': capacity_max
+        }
+    }
+    return jsonify(response), 200
+
+
 @app.route('/estimated_price', methods=['GET'])
 def get_price():
-    model_name = functions.get_model_name(request.args)
-    X_test = functions.convert_request_data_to_ml_model_data(request.args)
+    prediction = 0
+    if request.args['Estymator'] == 'Regresja liniowa':
+        prediction = functions.linear_prediction(request.args)
+    elif request.args['Estymator'] == 'Regresja wielomianowa':
+        prediction = functions.polynomial_prediction(request.args)
+        
+    year_price_data = functions.create_year_price_data_to_graph(request.args)
+    year_price_data_prediction = functions.create_year_price_regression_data_to_graph(request.args)
 
-    linear_regressor = get_linear_model(model_name)
-    X_linear_test = np.asarray(X_test).reshape(1, -1)
-
-    polynomial_regressor = get_polynomial_model(model_name)
-    polynomial_features = get_polynomial_features(model_name)
-    X_poly_test = polynomial_features.transform(
-        np.asarray(X_test).reshape(1, -1))
-
-    linear_prediction = linear_regressor.predict(X_linear_test)
-    polynomial_prediction = polynomial_regressor.predict(X_poly_test)
-
-    data_to_chart = functions.get_data_to_chart(request.args)
-    otomoto_url = functions.generate_otomoto_link(request.args)
+    otomoto_url = functions.generate_otomoto_url(request.args)
 
     response = {
-        'Cena regresja liniowa': int(linear_prediction.item()),
-        'Cena regresja wielomianowa': int(polynomial_prediction.item()),
-        'Url': otomoto_url,
-        'Lista': data_to_chart
+        'Cena': prediction,
+        'Lista baza danych': year_price_data,
+        'Lista predykcje': year_price_data_prediction,
+        'Url': otomoto_url
     }
-
-    # response = {
-    #     'Cena' : int(polynomial_prediction.item())
-    # }
     return jsonify(response), 200
 
 
